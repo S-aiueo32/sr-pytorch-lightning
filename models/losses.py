@@ -7,10 +7,20 @@ import torchvision.models.vgg as vgg
 
 
 class GANLoss(nn.Module):
-    def __init__(self, gan_mode, target_real_label=1.0, target_fake_label=0.0):
+    """
+    PyTorch module for GAN loss.
+    This code is inspired by https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix.
+    """
+    def __init__(self,
+                 gan_mode='wgangp',
+                 target_real_label=1.0,
+                 target_fake_label=0.0):
+
         super(GANLoss, self).__init__()
+
         self.register_buffer('real_label', torch.tensor(target_real_label))
         self.register_buffer('fake_label', torch.tensor(target_fake_label))
+
         self.gan_mode = gan_mode
         if gan_mode == 'lsgan':
             self.loss = nn.MSELoss()
@@ -34,33 +44,35 @@ class GANLoss(nn.Module):
             loss = self.loss(prediction, target_tensor)
         elif self.gan_mode == 'wgangp':
             if target_is_real:
-                loss = -prediction.mean()
+                loss = 1 - prediction.mean()
             else:
                 loss = prediction.mean()
         return loss
 
-class VGGLoss(nn.Module):
-    """Creates a criterion that measures the error in the VGG feature space.
-    """
 
-    def __init__(self, net_type='vgg19', layer='relu2_2', scale=0.00125):
+class VGGLoss(nn.Module):
+    def __init__(self, net_type='vgg19', layer='relu2_2', rescale=0.006):
         """
-            Args:
-                net_type (str): type of vgg network, i.e. `vgg16` or `vgg19`.
-                layer (str): layer where the mean squared error is calculated.
-                scale (float): scale factor for VGG Loss (0.00125 for CNN-CR, 0.006 for SRGAN)
+        Parameter
+        ---
+        net_type : str
+            type of vgg network, i.e. `vgg16` or `vgg19`.
+        layer : str
+            layer where the mean squared error is calculated.
+        rescale : float
+            rescale factor for VGG Loss
         """
         super(VGGLoss, self).__init__()
 
         if net_type == 'vgg16':
             assert layer in ['relu1_2', 'relu2_2', 'relu3_3', 'relu4_3']
-            self.vgg_net = VGG16()
-            self.layer = layer
+            self.__vgg_net = VGG16()
+            self.__layer = layer
         elif net_type == 'vgg19':
             assert layer in ['relu1_2', 'relu2_2', 'relu3_4',
                              'relu4_4', 'relu5_4']
-            self.vgg_net = VGG19()
-            self.layer = layer
+            self.__vgg_net = VGG19()
+            self.__layer = layer
 
         self.register_buffer(
             name='vgg_mean',
@@ -72,33 +84,42 @@ class VGGLoss(nn.Module):
             tensor=torch.tensor([[[0.229]], [[0.224]], [[0.225]]],
                                 requires_grad=False)
         )
-        self.register_buffer(   # to balance vgg_loss with other losses.
-            name='scale',
-            tensor=torch.tensor(scale, requires_grad=False)
+        self.register_buffer(   # to balance VGG loss with other losses.
+            name='rescale',
+            tensor=torch.tensor(rescale, requires_grad=False)
         )
 
-    def normalize(self, img):
+    def __normalize(self, img):
         img = img.sub(self.vgg_mean.detach())
         img = img.div(self.vgg_std.detach())
         return img
 
     def forward(self, x, y):
         """
-            Args:
-                x, y (torch.Tensor):
-                    input or output tensor. they must be normalized to [0, 1].
-            Returns;
-                torch.Tensor: the mean squared error between the inputs.
+        Paramenters
+        ---
+        x, y : torch.Tensor
+            input or output tensor. they must be normalized to [0, 1].
+
+        Returns
+        ---
+        out : torch.Tensor
+            mean squared error between the inputs.
         """
-        norm_x = self.normalize(x)
-        norm_y = self.normalize(y)
-        feat_x = getattr(self.vgg_net(norm_x), self.layer)
-        feat_y = getattr(self.vgg_net(norm_y), self.layer)
-        out = F.mse_loss(feat_x, feat_y) * self.scale
+        norm_x = self.__normalize(x)
+        norm_y = self.__normalize(y)
+        feat_x = getattr(self.__vgg_net(norm_x), self.__layer)
+        feat_y = getattr(self.__vgg_net(norm_y), self.__layer)
+        out = F.mse_loss(feat_x, feat_y) * self.rescale
         return out
 
 
 class VGG16(nn.Module):
+    """
+    Blockwise pickable VGG16.
+
+    This code is inspired by https://gist.github.com/crcrpar/a5d46738ffff08fc12138a5f270db426 
+    """
     def __init__(self, requires_grad=False):
         super(VGG16, self).__init__()
         vgg_pretrained_features = vgg.vgg16(pretrained=True).features
@@ -136,6 +157,11 @@ class VGG16(nn.Module):
 
 
 class VGG19(nn.Module):
+    """
+    Blockwise pickable VGG16.
+
+    This code is inspired by https://gist.github.com/crcrpar/a5d46738ffff08fc12138a5f270db426
+    """
     def __init__(self, requires_grad=False):
         super(VGG19, self).__init__()
         vgg_pretrained_features = vgg.vgg19(pretrained=True).features
@@ -177,3 +203,29 @@ class VGG19(nn.Module):
                           h_relu3_4, h_relu4_4, h_relu5_4)
 
         return out
+
+
+class TVLoss(nn.Module):
+    """
+    Total Variation Loss
+
+    This code is copied from https://github.com/leftthomas/SRGAN/blob/master/loss.py
+    """
+    def __init__(self, tv_loss_weight=1):
+        super(TVLoss, self).__init__()
+        self.tv_loss_weight = tv_loss_weight
+
+    def forward(self, x):
+        batch_size = x.size()[0]
+        h_x = x.size()[2]
+        w_x = x.size()[3]
+        count_h = self.tensor_size(x[:, :, 1:, :])
+        count_w = self.tensor_size(x[:, :, :, 1:])
+        h_tv = torch.pow((x[:, :, 1:, :] - x[:, :, :h_x - 1, :]), 2).sum()
+        w_tv = torch.pow((x[:, :, :, 1:] - x[:, :, :, :w_x - 1]), 2).sum()
+        return self.tv_loss_weight * 2 * (h_tv / count_h + w_tv / count_w) / batch_size
+
+    @staticmethod
+    def tensor_size(t):
+        return t.size()[1] * t.size()[2] * t.size()[3]
+

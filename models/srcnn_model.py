@@ -9,6 +9,7 @@ import pytorch_lightning as pl
 from .datasets import DatasetFromFolder
 from .networks import SRCNN
 
+
 class SRCNNModel(pl.LightningModule):
     def __init__(self, opt):
         super(SRCNNModel, self).__init__()
