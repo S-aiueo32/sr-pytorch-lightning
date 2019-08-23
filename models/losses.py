@@ -44,7 +44,7 @@ class GANLoss(nn.Module):
             loss = self.loss(prediction, target_tensor)
         elif self.gan_mode == 'wgangp':
             if target_is_real:
-                loss = 1 - prediction.mean()
+                loss = - prediction.mean()
             else:
                 loss = prediction.mean()
         return loss
