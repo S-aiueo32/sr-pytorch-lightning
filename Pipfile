@@ -7,11 +7,14 @@ verify_ssl = true
 pylint = "*"
 flake8 = "*"
 autopep8 = "*"
+ipython = "*"
 
 [packages]
 torch = "*"
 torchvision = "*"
 pytorch-lightning = "*"
+kornia = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3.7"
