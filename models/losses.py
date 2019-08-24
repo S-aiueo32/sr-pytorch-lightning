@@ -53,7 +53,7 @@ class GANLoss(nn.Module):
 
 class VGGLoss(nn.Module):
     """
-    PyTorch module for GAN loss.
+    PyTorch module for VGG loss.
     """
     def __init__(self, net_type='vgg19', layer='relu2_2', rescale=0.006):
         """
@@ -162,7 +162,7 @@ class VGG16(nn.Module):
 
 class VGG19(nn.Module):
     """
-    Blockwise pickable VGG16.
+    Blockwise pickable VGG19.
 
     This code is inspired by https://gist.github.com/crcrpar/a5d46738ffff08fc12138a5f270db426
     """
