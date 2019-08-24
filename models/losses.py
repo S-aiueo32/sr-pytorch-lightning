@@ -1,5 +1,6 @@
 from collections import namedtuple
 
+import kornia.color as kc
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -51,6 +52,9 @@ class GANLoss(nn.Module):
 
 
 class VGGLoss(nn.Module):
+    """
+    PyTorch module for GAN loss.
+    """
     def __init__(self, net_type='vgg19', layer='relu2_2', rescale=0.006):
         """
         Parameter
@@ -207,7 +211,7 @@ class VGG19(nn.Module):
 
 class TVLoss(nn.Module):
     """
-    Total Variation Loss
+    Total Variation Loss.
 
     This code is copied from https://github.com/leftthomas/SRGAN/blob/master/loss.py
     """
@@ -229,3 +233,19 @@ class TVLoss(nn.Module):
     def tensor_size(t):
         return t.size()[1] * t.size()[2] * t.size()[3]
 
+
+class PSNR(nn.Module):
+    """
+    Peak Signal/Noise Ratio.
+    """
+    def __init__(self, max_val=1.):
+        super(PSNR, self).__init__()
+        self.max_val = max_val
+
+    def forward(self, predictions, targets):
+        if predictions.shape[1] == 3:
+            predictions = kc.rgb_to_grayscale(predictions)
+            targets = kc.rgb_to_grayscale(targets)
+        mse = F.mse_loss(predictions, targets)
+        psnr = 10 * torch.log10(self.max_val ** 2 / mse)
+        return psnr
