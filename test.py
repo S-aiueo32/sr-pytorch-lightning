@@ -31,6 +31,10 @@ def main():
     model.eval()
     model.freeze()
 
+    save_dir = Path(opt.ckpt)
+    save_dir = save_dir.with_name(Path(opt.ckpt).stem.replace('_ckpt_', ''))
+    save_dir.mkdir(exist_ok=True)
+
     criterion_PSNR = models.losses.PSNR()
     criterion_SSIM = SSIM(window_size=11, reduction='mean')
 
@@ -53,14 +57,11 @@ def main():
             psnr_mean += psnr
             ssim_mean += ssim
 
-            save_image(img_sr, Path(opt.ckpt).parent /
-                       f'{dataset}_{img_name}.png', nrow=1)
+            save_image(img_sr, save_dir / f'{dataset}_{img_name}.png', nrow=1)
 
         psnr_mean /= len(dataloader)
         ssim_mean /= len(dataloader)
-        tbar.set_description(
-            f'[{dataset}] PSNR: {psnr_mean:.4}, SSIM: {ssim_mean:.4}'
-        )
+        print(f'[{dataset}] PSNR: {psnr_mean:.4}, SSIM: {ssim_mean:.4}')
 
 
 if __name__ == "__main__":
