@@ -54,18 +54,17 @@ class GANLoss(nn.Module):
 class VGGLoss(nn.Module):
     """
     PyTorch module for VGG loss.
+
+    Parameter
+    ---------
+    net_type : str
+        type of vgg network, i.e. `vgg16` or `vgg19`.
+    layer : str
+        layer where the mean squared error is calculated.
+    rescale : float
+        rescale factor for VGG Loss
     """
     def __init__(self, net_type='vgg19', layer='relu2_2', rescale=0.006):
-        """
-        Parameter
-        ---
-        net_type : str
-            type of vgg network, i.e. `vgg16` or `vgg19`.
-        layer : str
-            layer where the mean squared error is calculated.
-        rescale : float
-            rescale factor for VGG Loss
-        """
         super(VGGLoss, self).__init__()
 
         if net_type == 'vgg16':
