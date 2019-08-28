@@ -76,8 +76,8 @@ class SRGANModel(pl.LightningModule):
 
         elif optimizer_i == 1:  # train generator
             # content loss
-            mse_loss = self.criterion_MSE((self.img_sr + 1) / 2,  # \in [-1, 1]
-                                          (img_hr + 1) / 2)  # \in [-1, 1]
+            mse_loss = self.criterion_MSE(self.img_sr * 2 - 1,  # \in [-1, 1]
+                                          img_hr * 2 - 1)  # \in [-1, 1]
             vgg_loss = self.criterion_VGG(self.img_sr, img_hr)
             content_loss = (vgg_loss + mse_loss) / 2
             # adversarial loss
