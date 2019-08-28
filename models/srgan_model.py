@@ -150,7 +150,7 @@ class SRGANModel(pl.LightningModule):
             scale_factor=self.scale_factor,
             patch_size=self.patch_size
         )
-        return DataLoader(dataset, self.batch_size, shuffle=True)
+        return DataLoader(dataset, self.batch_size, shuffle=True, num_workers=4)
 
     @pl.data_loader
     def val_dataloader(self):
@@ -159,7 +159,7 @@ class SRGANModel(pl.LightningModule):
             scale_factor=self.scale_factor,
             mode='eval'
         )
-        return DataLoader(dataset, batch_size=1)
+        return DataLoader(dataset, batch_size=1, num_workers=4)
 
     @pl.data_loader
     def test_dataloader(self):
@@ -169,7 +169,7 @@ class SRGANModel(pl.LightningModule):
                 scale_factor=self.scale_factor,
                 mode='eval'
             )
-            return DataLoader(dataset, batch_size=1)
+            return DataLoader(dataset, batch_size=1, num_workers=4)
 
         out_dict = OrderedDict()
         for name in ['Set5', 'Set14', 'BSD100', 'Urban100']:
